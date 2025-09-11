@@ -42,6 +42,7 @@ dependencies:
   just_audio: ^0.10.4 
  
   flutter_sound: ^9.28.0 
+  syncfusion_flutter_pdfviewer: ^31.1.18
 
 dev_dependencies:
   flutter_test:

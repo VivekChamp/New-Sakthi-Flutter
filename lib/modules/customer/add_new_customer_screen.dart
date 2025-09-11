@@ -311,7 +311,6 @@ class _AddNewCustomerScreenState extends State<AddNewCustomerScreen> {
 
   /// Gets the current device location.
   Future<void> _getCurrentLocation() async {
-    // ... (Existing _getCurrentLocation logic remains unchanged)
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       showErrorDialog(
@@ -422,7 +421,6 @@ class _AddNewCustomerScreenState extends State<AddNewCustomerScreen> {
 
   /// Creates a new address record.
   Future<String?> _createAddress(String customerId) async {
-    // ... (Existing _createAddress logic remains unchanged)
     if (addressLine1Controller.text.isEmpty &&
         addressLine2Controller.text.isEmpty &&
         cityController.text.isEmpty &&
@@ -472,7 +470,6 @@ class _AddNewCustomerScreenState extends State<AddNewCustomerScreen> {
 
   /// Creates a new contact record.
   Future<String?> _createContact(String customerId) async {
-    // ... (Existing _createContact logic remains unchanged)
     if (contactPersonNameController.text.isEmpty &&
         emailController.text.isEmpty &&
         phoneController.text.isEmpty) {
@@ -536,6 +533,22 @@ class _AddNewCustomerScreenState extends State<AddNewCustomerScreen> {
     }
   }
 
+  /// Shows a date picker for the Date of Establishment field.
+  Future<void> _selectDateOfEstd(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        // Update the controller with the date formatted for the UI.
+        dateOfEstdController.text = DateFormat('dd-MM-yyyy').format(picked);
+      });
+    }
+  }
+
   /// Main function to handle the creation of a new customer.
   Future<void> _addNewCustomer() async {
     if (!_formKey.currentState!.validate()) {
@@ -563,11 +576,23 @@ class _AddNewCustomerScreenState extends State<AddNewCustomerScreen> {
 
     try {
       // 1. Create Customer
+      // Convert date from dd-MM-yyyy (UI) to yyyy-MM-dd (API) before sending.
+      String dateToSend = '';
+      if (dateOfEstdController.text.isNotEmpty) {
+        try {
+          final date =
+              DateFormat('dd-MM-yyyy').parse(dateOfEstdController.text);
+          dateToSend = DateFormat('yyyy-MM-dd').format(date);
+        } catch (e) {
+          throw 'Invalid date format. Please use the date picker.';
+        }
+      }
+
       final customMapLink = _generateMapLink(latitude, longitude);
       final customerData = {
         'customer_name': customerNameController.text,
         'customer_type': selectedCustomerType,
-        'custom_date_of_estd': dateOfEstdController.text,
+        'custom_date_of_estd': dateToSend, // Use the correctly formatted date
         'custom_brand_dealing': brandDealingController.text,
         'custom_annual_turnover': annualTurnoverController.text,
         'custom_msme_cat': msmeCatController.text,
@@ -703,7 +728,8 @@ class _AddNewCustomerScreenState extends State<AddNewCustomerScreen> {
                         _buildTextField(
                           controller: dateOfEstdController,
                           label: 'Date of Establishment',
-                          keyboardType: TextInputType.datetime,
+                          readOnly: true,
+                          onTap: () => _selectDateOfEstd(context),
                         ),
                         _buildTextField(
                           controller: brandDealingController,
@@ -891,13 +917,21 @@ class _AddNewCustomerScreenState extends State<AddNewCustomerScreen> {
     required String label,
     TextInputType? keyboardType,
     bool isRequired = false,
+    bool readOnly = false,
+    VoidCallback? onTap,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextFormField(
         controller: controller,
         keyboardType: keyboardType,
-        decoration: InputDecoration(labelText: label),
+        readOnly: readOnly,
+        onTap: onTap,
+        decoration: InputDecoration(
+          labelText: label,
+          suffixIcon:
+              onTap != null ? const Icon(Icons.calendar_today) : null,
+        ),
         validator: (value) {
           if (isRequired && (value == null || value.isEmpty)) {
             return 'This field is required';
@@ -1079,4 +1113,3 @@ class _AddNewCustomerScreenState extends State<AddNewCustomerScreen> {
     );
   }
 }
-

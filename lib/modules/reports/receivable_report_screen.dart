@@ -1,10 +1,15 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:open_file/open_file.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:sakthi_erp/shared/widgets/custom_search_dropdown.dart';
 import 'package:sakthi_erp/utils/error_handler.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'dart:convert';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 class ReceivableReportScreen extends StatefulWidget {
   final String serverUrl;
@@ -59,6 +64,8 @@ class _ReceivableReportScreenState extends State<ReceivableReportScreen> {
         },
       );
 
+      if (!mounted) return;
+
       if (response.statusCode == 200) {
         final dynamic responseData = json.decode(response.body);
         if (responseData['message']?['status'] == 'success' &&
@@ -75,7 +82,9 @@ class _ReceivableReportScreenState extends State<ReceivableReportScreen> {
         throw response.body;
       }
     } catch (e) {
-      showApiErrorDialog(context, message: e.toString());
+      if (mounted) {
+        showApiErrorDialog(context, message: e.toString());
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -132,30 +141,40 @@ class _ReceivableReportScreenState extends State<ReceivableReportScreen> {
         headers: {'Cookie': 'sid=${widget.sid}'},
       );
 
+      if (!mounted) return;
+
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = json.decode(response.body);
         final String? pdfUrl = responseData['message']?['pdf_url'];
 
         if (pdfUrl != null && pdfUrl.isNotEmpty) {
-          // Parse the server URL from login to get the correct scheme, host, and port.
           final serverUri = Uri.parse(widget.serverUrl);
-          
-          // Parse the pdfUrl from the response. This could be a relative path or a full URL.
           final responsePdfUri = Uri.parse(pdfUrl);
-
-          // Reconstruct the final PDF URI.
-          // This ensures that we use the scheme, host, and port from the login URL,
-          // and the path from the URL provided in the API response.
-          // This corrects any discrepancies in the port number or domain returned by the API.
           final finalPdfUri = serverUri.replace(
             path: responsePdfUri.path,
             queryParameters: responsePdfUri.queryParameters,
           );
 
-          if (await canLaunchUrl(finalPdfUri)) {
-            await launchUrl(finalPdfUri, mode: LaunchMode.externalApplication);
+          final pdfResponse = await http.get(
+            finalPdfUri,
+            headers: {'Cookie': 'sid=${widget.sid}'},
+          );
+          
+          if (!mounted) return;
+
+          if (pdfResponse.statusCode == 200) {
+            final Uint8List pdfBytes = pdfResponse.bodyBytes;
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PdfViewerScreen(
+                  pdfBytes: pdfBytes,
+                  customerName: _selectedCustomer!['customer_name'] ?? 'Report',
+                ),
+              ),
+            );
           } else {
-            throw 'Could not launch PDF URL: $finalPdfUri';
+             throw 'Failed to download PDF: ${pdfResponse.statusCode}';
           }
         } else {
           throw 'PDF URL not found in the server response.';
@@ -164,7 +183,9 @@ class _ReceivableReportScreenState extends State<ReceivableReportScreen> {
         throw response.body;
       }
     } catch (e) {
-      showApiErrorDialog(context, message: e.toString());
+      if (mounted) {
+        showApiErrorDialog(context, message: e.toString());
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -261,6 +282,114 @@ class _ReceivableReportScreenState extends State<ReceivableReportScreen> {
               ),
             )
           : const Text('Generate PDF'),
+    );
+  }
+}
+
+/// A new screen to display the PDF from memory bytes.
+class PdfViewerScreen extends StatefulWidget {
+  final Uint8List pdfBytes;
+  final String customerName;
+
+  const PdfViewerScreen(
+      {super.key, required this.pdfBytes, required this.customerName});
+
+  @override
+  State<PdfViewerScreen> createState() => _PdfViewerScreenState();
+}
+
+class _PdfViewerScreenState extends State<PdfViewerScreen> {
+  bool _isDownloading = false;
+
+  Future<void> _downloadPdf() async {
+    setState(() {
+      _isDownloading = true;
+    });
+
+    try {
+      // Request storage permission
+      var status = await Permission.storage.request();
+      if (!status.isGranted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content:
+                    Text('Storage permission is required to download files.')),
+          );
+        }
+        return;
+      }
+
+      // Get the directory to save the file
+      final directory = await getExternalStorageDirectory();
+      if (directory == null) {
+        throw 'Could not find a directory to save the file.';
+      }
+
+      final downloadsPath = Directory('${directory.path}/Download');
+      if (!await downloadsPath.exists()) {
+        await downloadsPath.create(recursive: true);
+      }
+
+      // Create a unique file name
+      final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+      final fileName =
+          'ReceivableReport_${widget.customerName.replaceAll(' ', '_')}_$timestamp.pdf';
+      final filePath = '${downloadsPath.path}/$fileName';
+
+      // Write the PDF bytes to a file
+      final file = File(filePath);
+      await file.writeAsBytes(widget.pdfBytes);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('PDF saved to Downloads folder: $fileName'),
+            action: SnackBarAction(
+              label: 'OPEN',
+              onPressed: () {
+                OpenFile.open(filePath);
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        showApiErrorDialog(context, message: 'Failed to download PDF: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Report Preview'),
+        actions: [
+          IconButton(
+            icon: _isDownloading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                        color: Colors.white, strokeWidth: 3),
+                  )
+                : const Icon(Icons.download),
+            onPressed: _isDownloading ? null : _downloadPdf,
+            tooltip: 'Download PDF',
+          ),
+        ],
+      ),
+      body: SfPdfViewer.memory(
+        widget.pdfBytes,
+      ),
     );
   }
 }

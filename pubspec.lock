@@ -105,6 +105,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.19.1"
+  convert:
+    dependency: transitive
+    description:
+      name: convert
+      sha256: b30acd5944035672bc15c6b7a8b47d773e41e2f17de064350988c5d02adb1c68
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.2"
   cross_file:
     dependency: transitive
     description:
@@ -129,6 +137,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.8"
+  device_info_plus:
+    dependency: transitive
+    description:
+      name: device_info_plus
+      sha256: "98f28b42168cc509abc92f88518882fd58061ea372d7999aecc424345c7bff6a"
+      url: "https://pub.dev"
+    source: hosted
+    version: "11.5.0"
+  device_info_plus_platform_interface:
+    dependency: transitive
+    description:
+      name: device_info_plus_platform_interface
+      sha256: e1ea89119e34903dca74b883d0dd78eb762814f97fb6c76f35e9ff74d261a18f
+      url: "https://pub.dev"
+    source: hosted
+    version: "7.0.3"
   dropdown_search:
     dependency: "direct main"
     description:
@@ -797,6 +821,78 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.1"
+  syncfusion_flutter_core:
+    dependency: transitive
+    description:
+      name: syncfusion_flutter_core
+      sha256: "243693c38eb8a39d93cb1442d89faeb58ba12c05c1ab495977ba09fd44160cec"
+      url: "https://pub.dev"
+    source: hosted
+    version: "31.1.18"
+  syncfusion_flutter_pdf:
+    dependency: transitive
+    description:
+      name: syncfusion_flutter_pdf
+      sha256: "4ba9d8cc2a6eed0296c5b4260205e88c3700e4c6ed659a6d3149f4c7b3c2be0b"
+      url: "https://pub.dev"
+    source: hosted
+    version: "31.1.18"
+  syncfusion_flutter_pdfviewer:
+    dependency: "direct main"
+    description:
+      name: syncfusion_flutter_pdfviewer
+      sha256: "0a78c84e9cc6ca92e38956e0d1450f3365ff17f3df7baf28434c9b224cd9c2df"
+      url: "https://pub.dev"
+    source: hosted
+    version: "31.1.18"
+  syncfusion_flutter_signaturepad:
+    dependency: transitive
+    description:
+      name: syncfusion_flutter_signaturepad
+      sha256: "6e9b8ab27a977cfa501793a83d7f98bb0d2d2d0228d31fd3eb7d1032a69c3779"
+      url: "https://pub.dev"
+    source: hosted
+    version: "31.1.18"
+  syncfusion_pdfviewer_linux:
+    dependency: transitive
+    description:
+      name: syncfusion_pdfviewer_linux
+      sha256: f14128efe32945f4149a5fddb7fdff2922e703ce2abf6fe93d9b1f4b7a3bb978
+      url: "https://pub.dev"
+    source: hosted
+    version: "31.1.18"
+  syncfusion_pdfviewer_macos:
+    dependency: transitive
+    description:
+      name: syncfusion_pdfviewer_macos
+      sha256: "330efc8b3c4f46cd775c66bd5c462851e077a12ed07d93de6caca3e584561d45"
+      url: "https://pub.dev"
+    source: hosted
+    version: "31.1.18"
+  syncfusion_pdfviewer_platform_interface:
+    dependency: transitive
+    description:
+      name: syncfusion_pdfviewer_platform_interface
+      sha256: "704426778a63558408f9f6aaafaa3b1f25ea0507a854f0c6c736f722a6f59c3a"
+      url: "https://pub.dev"
+    source: hosted
+    version: "31.1.18"
+  syncfusion_pdfviewer_web:
+    dependency: transitive
+    description:
+      name: syncfusion_pdfviewer_web
+      sha256: a45d8ecaf484db49b53c6112fc3ffddc945d64d6d7c9db13df3e4690b12a880f
+      url: "https://pub.dev"
+    source: hosted
+    version: "31.1.18"
+  syncfusion_pdfviewer_windows:
+    dependency: transitive
+    description:
+      name: syncfusion_pdfviewer_windows
+      sha256: "95e77ef0f8ebbf9f6bc560875a9041e0fcfaa58c5cf1b998b07008fd6fc562b6"
+      url: "https://pub.dev"
+    source: hosted
+    version: "31.1.18"
   synchronized:
     dependency: transitive
     description:
@@ -933,6 +1029,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "5.14.0"
+  win32_registry:
+    dependency: transitive
+    description:
+      name: win32_registry
+      sha256: "6f1b564492d0147b330dd794fee8f512cec4977957f310f9951b5f9d83618dae"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.0"
   xdg_directories:
     dependency: transitive
     description:
@@ -951,4 +1055,4 @@ packages:
     version: "6.5.0"
 sdks:
   dart: ">=3.8.0 <4.0.0"
-  flutter: ">=3.27.0"
+  flutter: ">=3.29.0"

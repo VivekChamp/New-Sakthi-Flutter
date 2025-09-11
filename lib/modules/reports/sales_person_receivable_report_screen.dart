@@ -1,10 +1,15 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:open_file/open_file.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:sakthi_erp/utils/error_handler.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
-import 'dart:convert';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 class SalesPersonReceivableReportScreen extends StatefulWidget {
   final String serverUrl;
@@ -77,6 +82,9 @@ class _SalesPersonReceivableReportScreenState
           'Accept': 'application/json',
         },
       ).timeout(const Duration(seconds: 10));
+
+      if (!mounted) return;
+
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body);
         final List<dynamic> companies = jsonResponse['message']['data'] ?? [];
@@ -136,6 +144,9 @@ class _SalesPersonReceivableReportScreenState
           'Accept': 'application/json',
         },
       ).timeout(const Duration(seconds: 20));
+
+      if (!mounted) return;
+
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body);
         final Map<String, dynamic> data = jsonResponse['message'] ?? {};
@@ -246,9 +257,13 @@ class _SalesPersonReceivableReportScreenState
       final response = await http.get(uri, headers: {
         'Cookie': 'sid=${widget.sid}'
       }).timeout(const Duration(seconds: 30));
+
+      if (!mounted) return;
+
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = json.decode(response.body);
         final String? pdfUrl = responseData['message']?['pdf_url']?.toString();
+
         if (pdfUrl != null && pdfUrl.isNotEmpty) {
           final serverUri = Uri.parse(widget.serverUrl);
           final responsePdfUri = Uri.parse(pdfUrl);
@@ -258,10 +273,25 @@ class _SalesPersonReceivableReportScreenState
             queryParameters: responsePdfUri.queryParameters,
           );
 
-          if (await canLaunchUrl(finalPdfUri)) {
-            await launchUrl(finalPdfUri, mode: LaunchMode.externalApplication);
+          // Download the PDF content from the final URL
+          final pdfResponse = await http.get(
+            finalPdfUri,
+            headers: {'Cookie': 'sid=${widget.sid}'},
+          );
+
+          if (!mounted) return;
+
+          if (pdfResponse.statusCode == 200) {
+            final Uint8List pdfBytes = pdfResponse.bodyBytes;
+            // Navigate to the PDF viewer screen
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PdfViewerScreen(pdfBytes: pdfBytes, customerName: customerName),
+              ),
+            );
           } else {
-            throw 'Could not launch PDF URL: $finalPdfUri';
+            throw 'Failed to download PDF: ${pdfResponse.statusCode}';
           }
         } else {
           throw 'PDF URL not found in the server response.';
@@ -555,3 +585,108 @@ class _SalesPersonReceivableReportScreenState
     );
   }
 }
+
+/// A new screen to display the PDF from memory bytes.
+class PdfViewerScreen extends StatefulWidget {
+  final Uint8List pdfBytes;
+  final String customerName;
+
+  const PdfViewerScreen({super.key, required this.pdfBytes, required this.customerName});
+
+  @override
+  State<PdfViewerScreen> createState() => _PdfViewerScreenState();
+}
+
+class _PdfViewerScreenState extends State<PdfViewerScreen> {
+  bool _isDownloading = false;
+
+  Future<void> _downloadPdf() async {
+    setState(() {
+      _isDownloading = true;
+    });
+
+    try {
+      // Request storage permission
+      var status = await Permission.storage.request();
+      if (!status.isGranted) {
+        if(mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Storage permission is required to download files.')),
+        );
+        }
+        return;
+      }
+
+      // Get the directory to save the file
+      final directory = await getExternalStorageDirectory();
+      if (directory == null) {
+        throw 'Could not find a directory to save the file.';
+      }
+      
+      final downloadsPath = Directory('${directory.path}/Download');
+      if (!await downloadsPath.exists()) {
+        await downloadsPath.create(recursive: true);
+      }
+
+      // Create a unique file name
+      final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+      final fileName = 'ReceivableReport_${widget.customerName.replaceAll(' ', '_')}_$timestamp.pdf';
+      final filePath = '${downloadsPath.path}/$fileName';
+
+      // Write the PDF bytes to a file
+      final file = File(filePath);
+      await file.writeAsBytes(widget.pdfBytes);
+      
+      if(mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('PDF saved to Downloads folder: $fileName'),
+          action: SnackBarAction(
+            label: 'OPEN',
+            onPressed: () {
+              OpenFile.open(filePath);
+            },
+          ),
+        ),
+      );
+      }
+
+    } catch (e) {
+      if(mounted) {
+      showApiErrorDialog(context, message: 'Failed to download PDF: $e');
+      }
+    } finally {
+      if(mounted) {
+      setState(() {
+        _isDownloading = false;
+      });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Report Preview'),
+        actions: [
+          IconButton(
+            icon: _isDownloading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                  )
+                : const Icon(Icons.download),
+            onPressed: _isDownloading ? null : _downloadPdf,
+            tooltip: 'Download PDF',
+          ),
+        ],
+      ),
+      body: SfPdfViewer.memory(
+        widget.pdfBytes,
+      ),
+    );
+  }
+}
+
